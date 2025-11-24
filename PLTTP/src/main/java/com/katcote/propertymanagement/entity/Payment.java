@@ -1,5 +1,6 @@
 package com.katcote.propertymanagement.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -13,46 +14,45 @@ import java.time.LocalTime;
         @Index(name = "idx_payment_method", columnList = "method")
     }
 )
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Payment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "payment_number", unique = true, length = 50)
-    private String paymentNumber;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "lease_id", nullable = false)
+    private Lease lease;
+
+    @Transient
+    private Long leaseId;
+
+    @Column(name = "payment_number", unique = true, length = 50, nullable = false)
+    private final String paymentNumber = PaymentCodeGenerator.generatePaymentCode();
 
     @Column(name = "amount", nullable = false)
-    private Integer amount;
+    private Integer amount = 0;
 
     @Column(name = "payment_date", nullable = false)
-    private LocalDate paymentDate;
+    private LocalDate paymentDate = LocalDate.now();
 
     @Column(name = "payment_time", nullable = false)
-    private LocalTime paymentTime;
+    private LocalTime paymentTime = LocalTime.now();
 
     @Column(name = "due_date", nullable = false)
-    private LocalDate dueDate;
+    private LocalDate dueDate = LocalDate.of(1, 1, 1);
 
     @Column(name = "method", nullable = false, length = 20)
-    private String method; // CASH, CREDIT_CARD, DEBIT_CARD, BANK_TRANSFER, CHECK
+    private String method = "UNKNOWN";
 
     @Column(name = "status", nullable = false, length = 20)
-    private String status = "PENDING"; // PENDING, COMPLETED, FAILED, REFUNDED
-
-    @Column(name = "lease_number", length = 100, nullable = false)
-    private String leaseNumber;
-
-    @Column(name = "tenant_id", nullable = false)
-    private Long tenantId;
-
-    @Column(name = "landlord_id", nullable = false)
-    private Long landlordId;
+    private String status = "PENDING";
 
     @Column(name = "description", columnDefinition = "TEXT", nullable = false)
-    private String description;
+    private String description = "None";
 
     @Column(name = "notes", columnDefinition = "TEXT", nullable = false)
-    private String notes;
+    private String notes = "None";
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -61,59 +61,50 @@ public class Payment {
     private LocalDateTime updatedAt;
 
     @Version
-    @Column(name = "version")
+    @Column(name = "version", nullable = false)
     private Integer version;
 
     @PrePersist
-    protected void onCreate()
-    {
-        paymentNumber   = "PAY-" + id + "-" + LocalDate.now() + "-" + LocalTime.now().hashCode() + "-" + System.currentTimeMillis();
-        amount          = 0;
-        paymentDate     = LocalDate.of(1, 1, 1);
-        paymentTime     = LocalTime.of(1, 1);
-        dueDate         = LocalDate.of(1, 1, 1);
-        method          = "UNKNOWN";
-        status          = "PENDING";
-        leaseNumber     = "Unknown";
-        tenantId        = 0L;
-        landlordId      = 0L;
-        description     = "None";
-        notes           = "None";
-        createdAt       = LocalDateTime.now();
-        updatedAt       = LocalDateTime.now();
-        version         = 0;
+    protected void onCreate() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+        updatedAt = LocalDateTime.now();
+        if (version == null) {
+            version = 0;
+        }
     }
 
     @PreUpdate
-    protected void onUpdate()
-    { updatedAt = LocalDateTime.now(); version = version + 1; }
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+        if (version != null) {
+            version = version + 1;
+        } else {
+            version = 0;
+        }
+    }
+
+    @PostLoad
+    private void onLoad() {
+        if (lease != null) {
+            this.leaseId = lease.getId();
+        }
+    }
 
     // Конструкторы
     public Payment() {}
 
-    public Payment
-        (
-            Integer amount,
-            LocalDate paymentDate,
-            LocalTime paymentTime,
-            LocalDate dueDate,
-            String method,
-            String leaseNumber,
-            Long tenantId,
-            Long landlordId
-        ){
-        this.amount = amount;
-        this.paymentDate = paymentDate;
-        this.paymentTime = paymentTime;
-        this.dueDate = dueDate;
-        this.method = method;
-        this.leaseNumber = leaseNumber;
-        this.tenantId = tenantId;
-        this.landlordId = landlordId;
-    }
-
     // Геттеры и сеттеры
     public Long getId() { return id; }
+
+
+    public Lease getLease() { return lease; }
+    public void setLease(Lease lease) { this.lease = lease; }
+
+    public Long getLeaseId() { return leaseId; }
+    public void setLeaseId(Long leaseId) { this.leaseId = leaseId; }
+
 
     public String getPaymentNumber() { return paymentNumber; }
 
@@ -135,15 +126,6 @@ public class Payment {
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
 
-    public String getLeaseNumber() { return leaseNumber; }
-    public void setLeaseNumber(String leaseNumber) { this.leaseNumber = leaseNumber; }
-
-    public Long getTenantId() { return tenantId; }
-    public void setTenantId(Long tenantId) { this.tenantId = tenantId; }
-
-    public Long getLandlordId() { return landlordId; }
-    public void setLandlordId(Long landlordId) { this.landlordId = landlordId; }
-
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
 
@@ -155,4 +137,12 @@ public class Payment {
 
     public Integer getVersion() { return version; }
     public void setVersion(Integer version) { this.version = version; }
+
+    public static class PaymentCodeGenerator {
+        public static String generatePaymentCode() {
+            LocalDate date = LocalDate.now();
+            LocalTime time = LocalTime.now();
+            return "PAY-" + date.toString() + "-" + Math.abs(time.hashCode()) + "-" + System.currentTimeMillis();
+        }
+    }
 }

@@ -1,5 +1,6 @@
 package com.katcote.propertymanagement.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -11,48 +12,56 @@ import java.time.LocalDateTime;
         @Index(name = "idx_property_square_meters", columnList = "squareMeters")
     }
 )
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Property {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "address", nullable = false, length = 256)
-    private String address;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "landlord_id", nullable = false)
+    private Landlord landlord;
 
-    @Column(name = "city", nullable = false, length = 32)
-    private String city;
+    @Transient
+    private Long landlordId;
 
-    @Column(name = "state", nullable = false, length = 32)
-    private String state;
+    @Column(name = "address", columnDefinition = "TEXT", nullable = false)
+    private String address = "Not specified";
 
-    @Column(name = "zip_code", nullable = false, length = 8)
-    private String zipCode;
+    @Column(name = "city", columnDefinition = "TEXT", nullable = false)
+    private String city = "Not specified";
 
-    @Column(name = "property_type", length = 50, nullable = false)
-    private String propertyType;
+    @Column(name = "state", columnDefinition = "TEXT", nullable = false)
+    private String state = "Not specified";
+
+    @Column(name = "zip_code", columnDefinition = "TEXT", nullable = false)
+    private String zipCode = "Not specified";
+
+    @Column(name = "property_type", columnDefinition = "TEXT", nullable = false)
+    private String propertyType = "Not specified";
 
     @Column(name = "bedrooms", nullable = false)
-    private Integer bedrooms;
+    private Integer bedrooms = 0;
 
     @Column(name = "bathrooms", nullable = false)
-    private Integer bathrooms;
+    private Integer bathrooms = 0;
 
     @Column(name = "square_meters", nullable = false)
-    private Integer squareMeters;
+    private Integer squareMeters = 0;
 
     @Column(name = "rent_amount", nullable = false)
-    private Integer rentAmount;
+    private Integer rentAmount = 0;
 
     @Column(name = "deposit", nullable = false)
-    private Integer deposit;
+    private Integer deposit = 0;
 
     @Column(name = "available", nullable = false)
-    private Boolean available = true;
+    private Boolean available = false;
 
-    @Column(name = "description", columnDefinition = "TEXT", length = 1024, nullable = false)
-    private String description;
+    @Column(name = "description", columnDefinition = "TEXT", nullable = false)
+    private String description = "Not specified";
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "created_at", updatable = false, nullable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at", nullable = false)
@@ -63,53 +72,44 @@ public class Property {
     private Integer version;
 
     @PrePersist
-    protected void onCreate()
-    {
-        address         = "Not specified";
-        city            = "Not specified";
-        state           = "Not specified";
-        zipCode         = "Not specified";
-        propertyType    = "Not specified";
-        bedrooms        = 0;
-        bathrooms       = 0;
-        squareMeters    = 0;
-        rentAmount      = 0;
-        deposit         = 0;
-        available       = false;
-        description     = "Not specified";
-        createdAt       = LocalDateTime.now();
-        updatedAt       = LocalDateTime.now();
-        version         = 0;
+    protected void onCreate() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+        updatedAt = LocalDateTime.now();
+        if (version == null) {
+            version = 0;
+        }
     }
 
     @PreUpdate
-    protected void onUpdate()
-    { updatedAt = LocalDateTime.now(); version = version + 1; }
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+        if (version != null) {
+            version = version + 1;
+        } else {
+            version = 0;
+        }
+    }
+
+    @PostLoad
+    private void onLoad() {
+        if (landlord != null) {
+            this.landlordId = landlord.getId();
+        }
+    }
 
     public Property() {}
 
-    public Property
-            (
-            String address,
-            String city,
-            String state,
-            String zipCode,
-            String propertyType,
-            Integer squareMeters,
-            Integer rentAmount,
-            Boolean available
-            ){
-        this.address = address;
-        this.city = city;
-        this.state = state;
-        this.zipCode = zipCode;
-        this.propertyType = propertyType;
-        this.squareMeters = squareMeters;
-        this.rentAmount = rentAmount;
-        this.available = available;
-    }
-
     public Long getId() { return id; }
+
+
+    public Landlord getLandlord() { return landlord; }
+    public void setLandlord(Landlord landlord) { this.landlord = landlord; }
+
+    public Long getLandlordId() { return landlordId; }
+    public void setLandlordId(Long landlordId) { this.landlordId = landlordId; }
+
 
     public String getAddress() { return address; }
     public void setAddress(String address) { this.address = address; }

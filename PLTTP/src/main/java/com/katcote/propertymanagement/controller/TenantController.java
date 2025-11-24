@@ -2,12 +2,13 @@ package com.katcote.propertymanagement.controller;
 
 import com.katcote.propertymanagement.entity.Tenant;
 import com.katcote.propertymanagement.repository.TenantRepository;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -19,6 +20,7 @@ public class TenantController {
 
     @PostMapping
     public Tenant createTenant(@RequestBody Tenant tenant) {
+        if (tenant == null) { tenant = new Tenant(); }
         return tenantRepository.save(tenant);
     }
 
@@ -35,12 +37,60 @@ public class TenantController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Tenant> updateTenant(@PathVariable Long id, @RequestBody Tenant tenantDetails) {
+    public ResponseEntity<Tenant> updateTenant(@PathVariable Long id, @RequestBody Map<String, Object> updates) {
         Optional<Tenant> optionalTenant = tenantRepository.findById(id);
         if (optionalTenant.isPresent()) {
             Tenant existingTenant = optionalTenant.get();
-            BeanUtils.copyProperties(tenantDetails, existingTenant,"id", "createdAt", "version");
-            return ResponseEntity.ok(tenantRepository.save(existingTenant));
+
+            for (Map.Entry<String, Object> entry : updates.entrySet()) {
+                String fieldName = entry.getKey();
+                Object value = entry.getValue();
+
+                switch (fieldName) {
+                    case "firstName":
+                        existingTenant.setFirstName((String) value);
+                        break;
+                    case "lastName":
+                        existingTenant.setLastName((String) value);
+                        break;
+                    case "email":
+                        existingTenant.setEmail((String) value);
+                        break;
+                    case "phone":
+                        existingTenant.setPhone((String) value);
+                        break;
+                    case "dateOfBirth":
+                        if (value instanceof String)
+                        { existingTenant.setDateOfBirth(LocalDate.parse((String) value)); }
+                        break;
+                    case "taxId":
+                        existingTenant.setTaxId((String) value);
+                        break;
+                    case "emergencyContact":
+                        existingTenant.setEmergencyContact((String) value);
+                        break;
+                    case "employmentStatus":
+                        existingTenant.setEmploymentStatus((String) value);
+                        break;
+                    case "monthlyIncome":
+                        existingTenant.setMonthlyIncome((Integer) value);
+                        break;
+                    case "creditScore":
+                        existingTenant.setCreditScore((Integer) value);
+                        break;
+                    case "notes":
+                        existingTenant.setNotes((String) value);
+                        break;
+                    case "active":
+                        existingTenant.setActive((Boolean) value);
+                        break;
+                    default:
+                        System.out.println("⚠️  Unknown field: " + fieldName);
+                }
+            }
+
+            Tenant saved = tenantRepository.save(existingTenant);
+            return ResponseEntity.ok(saved);
         }
         return ResponseEntity.notFound().build();
     }

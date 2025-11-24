@@ -1,5 +1,6 @@
 package com.katcote.propertymanagement.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -11,99 +12,80 @@ import java.time.LocalDateTime;
         @Index(name = "idx_tenant_active", columnList = "active")
     }
 )
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Tenant {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(name = "first_name", nullable = false, length = 32)
-    private String firstName;
+    private String firstName = "Unknown";
 
     @Column(name = "last_name", nullable = false, length = 32)
-    private String lastName;
+    private String lastName = "Unknown";
 
     @Column(name = "email", nullable = false, length = 150)
-    private String email;
+    private String email = "Unknown";
 
     @Column(name = "phone", length = 11, nullable = false)
-    private String phone;
+    private String phone = "Unknown";
 
     @Column(name = "date_of_birth", nullable = false)
-    private LocalDate dateOfBirth;
+    private LocalDate dateOfBirth = LocalDate.of(1, 1, 1);
 
     @Column(name = "tax_id", length = 11, nullable = false)
-    private String taxId;
+    private String taxId = "Unknown";
 
     @Column(name = "emergency_contact", length = 255, nullable = false)
-    private String emergencyContact;
+    private String emergencyContact = "Unknown";
 
     @Column(name = "employment_status", length = 50, nullable = false)
-    private String employmentStatus;
+    private String employmentStatus = "Unknown";
 
     @Column(name = "monthly_income", nullable = false)
-    private Integer monthlyIncome;
+    private Integer monthlyIncome = 0;
 
     @Column(name = "credit_score", nullable = false)
-    private Integer creditScore;
+    private Integer creditScore = 0;
 
     @Column(name = "notes", columnDefinition = "TEXT", nullable = false, length = 1024)
-    private String notes;
+    private String notes = "None";
 
     @Column(name = "active", nullable = false)
-    private Boolean active = true;
+    private Boolean active = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
     @Version
-    @Column(name = "version")
+    @Column(name = "version", nullable = false)
     private Integer version;
 
     @PrePersist
-    protected void onCreate()
-    {
-        firstName           = "Unknown";
-        lastName            = "Unknown";
-        email               = "Unknown";
-        phone               = "Unknown";
-        dateOfBirth         = LocalDate.of(1, 1, 1);
-        taxId               = "Unknown";
-        emergencyContact    = "Unknown";
-        employmentStatus    = "Unknown";
-        monthlyIncome       = 0;
-        creditScore         = 0;
-        notes               = "None";
-        active              = false;
-        createdAt           = LocalDateTime.now();
-        updatedAt           = LocalDateTime.now();
-        version = 0;
+    protected void onCreate() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+        updatedAt = LocalDateTime.now();
+        if (version == null) {
+            version = 0;
+        }
     }
 
     @PreUpdate
-    protected void onUpdate()
-    { updatedAt = LocalDateTime.now(); version = version + 1; }
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+        if (version != null) {
+            version = version + 1;
+        } else {
+            version = 0;
+        }
+    }
 
     public Tenant() {}
-
-    public Tenant
-        (
-            String firstName,
-            String lastName,
-            LocalDate dateOfBirth,
-            String taxId,
-            String email,
-            String phone
-        ){
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.dateOfBirth = dateOfBirth;
-        this.taxId = taxId;
-        this.email = email;
-        this.phone = phone;
-    }
 
     public Long getId() { return id; }
 

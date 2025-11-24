@@ -2,12 +2,13 @@ package com.katcote.propertymanagement.controller;
 
 import com.katcote.propertymanagement.entity.Landlord;
 import com.katcote.propertymanagement.repository.LandlordRepository;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -19,6 +20,7 @@ public class LandlordController {
 
     @PostMapping
     public Landlord createLandlord(@RequestBody Landlord landlord) {
+        if (landlord == null) { landlord = new Landlord(); }
         return landlordRepository.save(landlord);
     }
 
@@ -35,12 +37,54 @@ public class LandlordController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Landlord> updateLandlord(@PathVariable Long id, @RequestBody Landlord landlordDetails) {
+    public ResponseEntity<Landlord> updateLandlord(@PathVariable Long id, @RequestBody Map<String, Object> updates) {
         Optional<Landlord> optionalLandlord = landlordRepository.findById(id);
         if (optionalLandlord.isPresent()) {
             Landlord existingLandlord = optionalLandlord.get();
-            BeanUtils.copyProperties(landlordDetails, existingLandlord,"id", "createdAt", "version");
-            return ResponseEntity.ok(landlordRepository.save(existingLandlord));
+
+            for (Map.Entry<String, Object> entry : updates.entrySet()) {
+                String fieldName = entry.getKey();
+                Object value = entry.getValue();
+
+                switch (fieldName) {
+                    case "firstName":
+                        existingLandlord.setFirstName((String) value);
+                        break;
+                    case "lastName":
+                        existingLandlord.setLastName((String) value);
+                        break;
+                    case "email":
+                        existingLandlord.setEmail((String) value);
+                        break;
+                    case "phone":
+                        existingLandlord.setPhone((String) value);
+                        break;
+                    case "address":
+                        existingLandlord.setAddress((String) value);
+                        break;
+                    case "taxId":
+                        existingLandlord.setTaxId((String) value);
+                        break;
+                    case "dateOfBirth":
+                        if (value instanceof String)
+                        { existingLandlord.setDateOfBirth(LocalDate.parse((String) value)); }
+                        break;
+                    case "emergencyContact":
+                        existingLandlord.setEmergencyContact((String) value);
+                        break;
+                    case "notes":
+                        existingLandlord.setNotes((String) value);
+                        break;
+                    case "active":
+                        existingLandlord.setActive((Boolean) value);
+                        break;
+                    default:
+                        System.out.println("⚠️  Unknown field: " + fieldName);
+                }
+            }
+
+            Landlord saved = landlordRepository.save(existingLandlord);
+            return ResponseEntity.ok(saved);
         }
         return ResponseEntity.notFound().build();
     }
