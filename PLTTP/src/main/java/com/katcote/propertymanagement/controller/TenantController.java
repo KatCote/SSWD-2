@@ -1,49 +1,56 @@
 package com.katcote.propertymanagement.controller;
 
 import com.katcote.propertymanagement.entity.Tenant;
+import com.katcote.propertymanagement.repository.TenantRepository;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/tenants")
 public class TenantController {
 
-    private List<Tenant> tenants = new ArrayList<>();
+    @Autowired
+    private TenantRepository tenantRepository;
 
     @PostMapping
-    public Tenant createTenant() {
-        Tenant tenant = new Tenant();
-        tenants.add(tenant);
-        return tenant;
+    public Tenant createTenant(@RequestBody Tenant tenant) {
+        return tenantRepository.save(tenant);
     }
 
     @GetMapping
     public List<Tenant> getAllTenants() {
-        return tenants;
+        return tenantRepository.findAll();
     }
 
     @GetMapping("/{id}")
-    public Tenant getTenant(@PathVariable Long id) {
-        return tenants.stream()
-                .filter(t -> t.getId().equals(id))
-                .findFirst()
-                .orElse(null);
+    public ResponseEntity<Tenant> getTenant(@PathVariable Long id) {
+        Optional<Tenant> tenant = tenantRepository.findById(id);
+        return tenant.map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PutMapping("/{id}")
-    public Tenant updateTenant(@PathVariable Long id) {
-        Tenant tenant = getTenant(id);
-        if (tenant != null) {
-            // Логика обновления будет добавлена позже
-            return tenant;
+    public ResponseEntity<Tenant> updateTenant(@PathVariable Long id, @RequestBody Tenant tenantDetails) {
+        Optional<Tenant> optionalTenant = tenantRepository.findById(id);
+        if (optionalTenant.isPresent()) {
+            Tenant existingTenant = optionalTenant.get();
+            BeanUtils.copyProperties(tenantDetails, existingTenant,"id", "createdAt", "version");
+            return ResponseEntity.ok(tenantRepository.save(existingTenant));
         }
-        return null;
+        return ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/{id}")
-    public void deleteTenant(@PathVariable Long id) {
-        tenants.removeIf(t -> t.getId().equals(id));
+    public ResponseEntity<Void> deleteTenant(@PathVariable Long id) {
+        if (tenantRepository.existsById(id)) {
+            tenantRepository.deleteById(id);
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.notFound().build();
     }
 }

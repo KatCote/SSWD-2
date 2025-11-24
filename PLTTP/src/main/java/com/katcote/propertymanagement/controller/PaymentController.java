@@ -1,50 +1,56 @@
 package com.katcote.propertymanagement.controller;
 
 import com.katcote.propertymanagement.entity.Payment;
-
+import com.katcote.propertymanagement.repository.PaymentRepository;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/payments")
 public class PaymentController {
 
-    private List<Payment> payments = new ArrayList<>();
+    @Autowired
+    private PaymentRepository paymentRepository;
 
     @PostMapping
-    public Payment createPayment() {
-        Payment payment = new Payment();
-        payments.add(payment);
-        return payment;
+    public Payment createPayment(@RequestBody Payment payment) {
+        return paymentRepository.save(payment);
     }
 
     @GetMapping
     public List<Payment> getAllPayments() {
-        return payments;
+        return paymentRepository.findAll();
     }
 
     @GetMapping("/{id}")
-    public Payment getPayment(@PathVariable Long id) {
-        return payments.stream()
-                .filter(p -> p.getId().equals(id))
-                .findFirst()
-                .orElse(null);
+    public ResponseEntity<Payment> getPayment(@PathVariable Long id) {
+        Optional<Payment> payment = paymentRepository.findById(id);
+        return payment.map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PutMapping("/{id}")
-    public Payment updatePayment(@PathVariable Long id) {
-        Payment payment = getPayment(id);
-        if (payment != null) {
-            // Логика обновления будет добавлена позже
-            return payment;
+    public ResponseEntity<Payment> updatePayment(@PathVariable Long id, @RequestBody Payment paymentDetails) {
+        Optional<Payment> optionalPayment = paymentRepository.findById(id);
+        if (optionalPayment.isPresent()) {
+            Payment existingPayment = optionalPayment.get();
+            BeanUtils.copyProperties(paymentDetails, existingPayment,"id", "paymentNumber", "createdAt", "version");
+            return ResponseEntity.ok(paymentRepository.save(existingPayment));
         }
-        return null;
+        return ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/{id}")
-    public void deletePayment(@PathVariable Long id) {
-        payments.removeIf(p -> p.getId().equals(id));
+    public ResponseEntity<Void> deletePayment(@PathVariable Long id) {
+        if (paymentRepository.existsById(id)) {
+            paymentRepository.deleteById(id);
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.notFound().build();
     }
 }
